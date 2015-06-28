@@ -30,6 +30,7 @@ object RouterDriverActor extends ActorDescription {
 
 }
 
+// TODO: This class is kept as reference and show that the test succeeds with the old implementeation and the new one. It should be deleted once reviewed and accepted.
 class RouterDriverActorOld(driver: RouterDriver) extends Actor with ActorLogging with ActorSupport with ReplyActor with FutureSupportNotification with ActorExecutionContextProvider with RouterDriverNotificationProvider {
 
   import io.vamp.core.router_driver.RouterDriverActor._
