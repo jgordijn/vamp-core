@@ -1,18 +1,18 @@
 package io.vamp.core.router_driver
 
-import _root_.io.vamp.common.akka._
+import akka.actor.Status
 import akka.actor.{Actor, ActorLogging, Props}
+import akka.pattern.pipe
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
+import io.vamp.common.akka._
 import io.vamp.common.vitals.InfoRequest
 import io.vamp.core.model.artifact._
 import io.vamp.core.router_driver.notification.{RouterDriverNotificationProvider, RouterResponseError, UnsupportedRouterDriverRequest}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object RouterDriverActor extends ActorDescription {
-
-  lazy val timeout = Timeout(ConfigFactory.load().getInt("vamp.core.router-driver.response-timeout").seconds)
 
   def props(args: Any*): Props = Props(classOf[RouterDriverActor], args: _*)
 
@@ -30,11 +30,11 @@ object RouterDriverActor extends ActorDescription {
 
 }
 
-class RouterDriverActor(driver: RouterDriver) extends Actor with ActorLogging with ActorSupport with ReplyActor with FutureSupportNotification with ActorExecutionContextProvider with RouterDriverNotificationProvider {
+class RouterDriverActorOld(driver: RouterDriver) extends Actor with ActorLogging with ActorSupport with ReplyActor with FutureSupportNotification with ActorExecutionContextProvider with RouterDriverNotificationProvider {
 
   import io.vamp.core.router_driver.RouterDriverActor._
 
-  implicit val timeout = RouterDriverActor.timeout
+  implicit val timeout = Timeout(context.system.settings.config.getInt("vamp.core.router-driver.response-timeout").seconds)
 
   override protected def requestType: Class[_] = classOf[RouterDriverMessage]
 
@@ -52,5 +52,24 @@ class RouterDriverActor(driver: RouterDriver) extends Actor with ActorLogging wi
     }
   } catch {
     case e: Exception => exception(RouterResponseError(e))
+  }
+}
+
+class RouterDriverActor(driver: RouterDriver) extends Actor with ActorLogging with ActorSupport with FutureSupportNotification with ActorExecutionContextProvider with RouterDriverNotificationProvider {
+
+  import io.vamp.core.router_driver.RouterDriverActor._
+
+  def reply[A](future: Future[A]): Unit = {
+    pipe(future.recover { case failure ⇒ exception(RouterResponseError(failure)) }) to sender()
+  }
+
+  def receive: Receive = {
+    case InfoRequest                               ⇒ reply(driver.info)
+    case All                                       ⇒ reply(driver.all)
+    case Create(deployment, cluster, port, update) ⇒ reply(driver.create(deployment, cluster, port, update))
+    case Remove(deployment, cluster, port)         ⇒ reply(driver.remove(deployment, cluster, port))
+    case CreateEndpoint(deployment, port, update)  ⇒ reply(driver.create(deployment, port, update))
+    case RemoveEndpoint(deployment, port)          ⇒ reply(driver.remove(deployment, port))
+    case request                                   ⇒ sender() ! Status.Failure(exception(UnsupportedRouterDriverRequest(request)))
   }
 }

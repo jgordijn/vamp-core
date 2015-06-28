@@ -1,0 +1,3 @@
+package io.vamp.core.router_driver
+
+class NewImplementationRouterDriverActorSpec extends RouterDriverActorSpec(RouterDriverActorSpec.NewImplementation, "NewImplementationRouterDriverActorSpec")

@@ -79,6 +79,11 @@ val slickVersion = "2.1.0"
 val activeSlickVersion = "0.2.2"
 val postgresVersion = "9.1-901.jdbc4"
 
+
+val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
+val scalaTest = "org.scalatest" %% "scalatest" % scalatestVersion
+
+
 // Force scala version for the dependencies
 dependencyOverrides in ThisBuild ++= Set(
   "org.scala-lang" % "scala-compiler" % scalaVersion.value,
@@ -138,7 +143,11 @@ lazy val pulse_driver = project.settings(bintraySetting: _*).settings(
 
 lazy val router_driver = project.settings(bintraySetting: _*).settings(
   description := "Enables Vamp to talk to Vamp Router",
-  name:="core-router_driver"
+  name:="core-router_driver",
+  libraryDependencies ++= Seq(
+    scalaTest % "test",
+    akkaTestkit % "test"
+  )
 ).dependsOn(model).disablePlugins(sbtassembly.AssemblyPlugin)
 
 lazy val container_driver = project.settings(bintraySetting: _*).settings(
